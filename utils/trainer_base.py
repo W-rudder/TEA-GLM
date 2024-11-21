@@ -1,15 +1,11 @@
-from model import GraphEncoder, InstructGLM, Projector, LlamaEmbedding, GraphSageEncoder, OptGLM
-from transformers import LlamaConfig, get_scheduler, AutoModelForCausalLM, LlamaForCausalLM, AutoTokenizer, OPTForCausalLM, LlamaTokenizer
+from model import GraphEncoder, InstructGLM
+from transformers import LlamaConfig, get_scheduler, LlamaForCausalLM
 import torch
 from .utils import *
-from .instruction_preprocess_new import InstructionDataset, TestDataset, ChemblDataset
+from .instruction_preprocess import InstructionDataset
 from peft import (    # LoRA Setting
-    PeftModel,
     LoraConfig,
     get_peft_model,
-    get_peft_model_state_dict,
-    prepare_model_for_int8_training,
-    set_peft_model_state_dict,
 )
 
 class TrainerBase(object):
@@ -19,28 +15,20 @@ class TrainerBase(object):
 
 
     def create_dataloader(self, tokenizer):
-        if self.args.graph_unsup:
-            DatasetCls = ChemblDataset
-        else:
-            DatasetCls = InstructionDataset
+        DatasetCls = InstructionDataset
             
         if self.args.inference:
             test_dataset = DatasetCls(tokenizer, self.args, mode="test")
-            # test_dataset = MoleculeDataset(tokenizer, self.args, mode="test")
             test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=self.args.batch_size, drop_last=False,
                                                     pin_memory=True, shuffle=False, collate_fn=test_dataset.collate_fn)
             return test_loader
         else:
             train_dataset = DatasetCls(tokenizer, self.args, mode="train")
-            # val_dataset = DatasetCls(tokenizer, self.args, mode="valid")
 
 
             train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=self.args.batch_size, drop_last=True,
                                                     pin_memory=True, shuffle=True, collate_fn=train_dataset.collate_fn)
-            # val_loader_eval = torch.utils.data.DataLoader(val_dataset, batch_size=self.args.batch_size, drop_last=False,
-            #                                             pin_memory=True, shuffle=False, collate_fn=val_dataset.collate_fn)
 
-            # return train_loader, test_loader
             return train_loader
 
 
@@ -60,27 +48,14 @@ class TrainerBase(object):
     def create_model(self):
         config = self.create_config()
 
-        if self.args.llm_type == 'opt':
-            model = OptGLM.from_pretrained(
-                self.args.backbone,
-                torch_dtype=torch.bfloat16, 
-                device_map={"": self.cur_device}
-            )
-        elif self.args.llm_type == 'llama3':
-            model = LlamaForCausalLM.from_pretrained(
-                self.args.backbone,
-                torch_dtype=torch.float32,
-                device_map={"": self.cur_device}
-            )
-        else:
-            model = InstructGLM.from_pretrained(
-                self.args.backbone,
-                config=config,
-                torch_dtype=torch.bfloat16,
-                # use_cache=True, 
-                # low_cpu_mem_usage=True,
-                device_map={"": self.cur_device}
-            )
+        model = InstructGLM.from_pretrained(
+            self.args.backbone,
+            config=config,
+            torch_dtype=torch.bfloat16,
+            # use_cache=True, 
+            # low_cpu_mem_usage=True,
+            device_map={"": self.cur_device}
+        )
 
         llama_embeds = model.get_input_embeddings().weight.data
         
@@ -99,19 +74,13 @@ class TrainerBase(object):
         node_token=torch.zeros(110, llama_embeds.shape[1]).to(device=self.cur_device, dtype=llama_embeds.dtype)
         llama_embeds=torch.cat([llama_embeds, node_token],dim=0)
 
-        if self.args.raw_features:
-            first_model = Projector(self.args, llama_embed=llama_embeds).to(self.cur_device)
-        elif self.args.no_graph:
-            first_model = LlamaEmbedding(self.args, llama_embed=llama_embeds).to(self.cur_device)
-            first_model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
-        else:
-            self.args.gnn_output = llama_embeds.shape[1]
-            first_model = GraphEncoder(self.args, llama_embed=llama_embeds).to(self.cur_device, dtype=torch.bfloat16)
-            if not self.args.inference:
-                first_model.GT.load_state_dict(torch.load(f'./saved_model/gnn/{self.args.pretrain_gnn}'))
-            for n, p in first_model.named_parameters():
-                if n.split('.')[0] == 'GT':
-                    p.requires_grad_(False)
+        self.args.gnn_output = llama_embeds.shape[1]
+        first_model = GraphEncoder(self.args, llama_embed=llama_embeds).to(self.cur_device, dtype=torch.bfloat16)
+        if not self.args.inference:
+            first_model.GT.load_state_dict(torch.load(f'./saved_model/gnn/{self.args.pretrain_gnn}'))
+        for n, p in first_model.named_parameters():
+            if n.split('.')[0] == 'GT':
+                p.requires_grad_(False)
 
         return first_model, model
 

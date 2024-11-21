@@ -1,0 +1,8 @@
+/GNNPreTrain
+/accelerate_config
+/data
+/instruction
+/results
+/saved_model
+/wandb
+

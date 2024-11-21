@@ -8,7 +8,7 @@ llm='/path/to/llm'
 seed=0
 num_token=5
 prefix='prefix of your first model to save'
-pretrain_gnn='gnn_name.pth'
+pretrain_gnn='model_file.pth'
 
 
 accelerate launch \

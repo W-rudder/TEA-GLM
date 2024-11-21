@@ -9,8 +9,8 @@ datasets=('children:1000' 'history:1300' 'computer:1000' 'photo:1000' 'sports:50
 # 其他的参数
 dataset='computer'
 num_token=5
-prefix='test'
-llm='/home/wangduo/zhr/model/vicuna-7b-v1.5'
+prefix='prefix of your first model to save'
+llm='path/to/llm'
 
 
 for pair in "${datasets[@]}"

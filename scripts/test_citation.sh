@@ -9,8 +9,8 @@ datasets=('arxiv:700' 'pubmed:700' 'cora:850')
 # 其他的参数
 dataset='arxiv'
 num_token=5
-prefix='test'
-llm='/home/wangduo/zhr/model/vicuna-7b-v1.5'
+prefix='prefix of your first model to save'
+llm='path/to/llm'
 
 
 for pair in "${datasets[@]}"

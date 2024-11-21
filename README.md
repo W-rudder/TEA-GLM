@@ -67,14 +67,11 @@ bash ./script/train_arxiv.sh
 
 ## 4. Evaluation
 
-Fill blanks at [test_citation.sh](scripts/test_citation.sh) or [test_ecom.sh](scripts/test_citation.sh), then run the script. The generation results will be saved to `./results`
+Fill blanks at [test_citation.sh](scripts/test_citation.sh), then run the script. The generation results will be saved to `./results`
 
 ```shell
 # generate on citation datasets
 bash ./script/test_citation.sh
-
-# generate on ecom datasets
-bash ./script/test_ecom.sh
 ```
 
 

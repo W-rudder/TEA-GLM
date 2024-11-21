@@ -6,7 +6,6 @@ wandb offline
 datasets=('arxiv:700' 'pubmed:700' 'cora:850') 
 
 
-# 其他的参数
 dataset='arxiv'
 num_token=5
 prefix='prefix of your first model to save'

@@ -6,7 +6,6 @@ wandb offline
 datasets=('children:1000' 'history:1300' 'computer:1000' 'photo:1000' 'sports:500')
 
 
-# 其他的参数
 dataset='computer'
 num_token=5
 prefix='prefix of your first model to save'
